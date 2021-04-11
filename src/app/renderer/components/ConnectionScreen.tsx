@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import { Colors, Theme } from 'app/renderer/colors'
+import { connectionSlice } from 'app/redux'
 
 type Event = React.ChangeEvent<HTMLInputElement>
 type ConnectionInputProps = {
@@ -37,6 +38,8 @@ const ConnectionInputRow = styled.div`
 
     input {
         margin-left: 8px;
+        border-radius: 1px;
+        border: 1px solid ${Colors.STEEL_GREY};
     }
 `
 
@@ -79,7 +82,7 @@ export const ConnectionScreen: FunctionComponent = () => {
     const onConnectionSubmit = (e: React.FormEvent) => {
         console.log('submitted!')
         e.preventDefault()
-        dispatch({ type: 'ADD_TODO', text: 'hi' })
+        dispatch(connectionSlice.actions.attemptConnection('0'))
     }
 
     return (

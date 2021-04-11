@@ -23,6 +23,11 @@ body {
     height: 100%;
 }
 
+
+input {
+    padding: 2px;
+}
+
 @media screen and (prefers-color-scheme: dark) {
     /*dark theme*/
     body, input, button {
