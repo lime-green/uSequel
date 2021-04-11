@@ -4,16 +4,17 @@
         "module": "commonjs",
         "skipLibCheck": true,
         "esModuleInterop": true,
-        "noImplicitAny": true,
+        "noImplicitAny": false,
         "sourceMap": true,
         "baseUrl": ".",
         "outDir": "dist",
         "moduleResolution": "node",
         "resolveJsonModule": true,
         "paths": {
-            "*": ["node_modules/*"]
+            "*": ["node_modules/*", "./src/*"]
         },
-        "jsx": "react",
+        "rootDirs": ["./src"],
+        "jsx": "react"
     },
     "include": [
         "src/**/*"
