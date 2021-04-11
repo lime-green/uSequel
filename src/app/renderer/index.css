@@ -1,14 +1,37 @@
+:root {
+    --background-color-dark-mode: #2d2723;
+    --text-color-dark-mode: #DCDCDC;
+    --color-ebony: #2f3334;
+    --color-steel-grey: #434748;
+    --color-montana: #373c3d;
+}
+
+html {
+    height: 100%;
+    width: 100%;
+}
+
 body {
+    margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: auto;
-    max-width: 38rem;
-    padding: 2rem;
+    height: 100%;
+    font-size: 14px;
+}
+
+#react-app {
+    width: 100%;
+    height: 100%;
 }
 
 @media screen and (prefers-color-scheme: dark) {
     /*dark theme*/
-    body {
-        color: #DCDCDC;
+    body, input, button {
+        background-color: var(--background-color-dark-mode);
+        color: var(--text-color-dark-mode);
+    }
+
+    input {
+        background-color: var(--color-steel-grey);
     }
 }
 

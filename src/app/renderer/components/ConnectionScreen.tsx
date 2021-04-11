@@ -1,4 +1,8 @@
 import React, { FunctionComponent } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import styled from 'styled-components'
+
+import { Colors, Theme } from 'app/renderer/colors'
 
 type Event = React.ChangeEvent<HTMLInputElement>
 type ConnectionInputProps = {
@@ -6,9 +10,43 @@ type ConnectionInputProps = {
     name: string
     label: string
     onChange: (e: Event) => void
-    value: string | number | null
+    value: string | number
     placeholder?: string
 }
+
+const ConnectionScreenWrapper = styled.div`
+    background-color: ${Theme.BG};
+`
+
+const ConnectionForm = styled.form`
+    padding: 10px;
+    background-color: ${Theme.BG_SECONDARY};
+    border-radius: 5px;
+    border: 1px solid ${Colors.STEEL_GREY};
+`
+
+const Label = styled.label`
+    width: 100px;
+    text-align: right;
+    display: block;
+`
+
+const ConnectionInputRow = styled.div`
+    display: flex;
+    padding: 5px;
+
+    input {
+        margin-left: 8px;
+    }
+`
+
+const Button = styled.button`
+    background-color: ${Colors.BLUE_PRIMARY};
+    border: 0;
+    border-radius: 5px;
+    width: 100px;
+    padding: 3px;
+`
 
 const ConnectionInput = ({
     type,
@@ -18,21 +56,21 @@ const ConnectionInput = ({
     value,
     placeholder,
 }: ConnectionInputProps) => (
-    <div>
-        <label>
-            {label}
-            <input
-                onChange={onChange}
-                value={value || ''}
-                type={type}
-                name={name}
-                placeholder={placeholder}
-            />
-        </label>
-    </div>
+    <ConnectionInputRow>
+        <Label htmlFor={name}>{label}</Label>
+        <input
+            onChange={onChange}
+            value={value}
+            type={type}
+            name={name}
+            placeholder={placeholder}
+        />
+    </ConnectionInputRow>
 )
 
 export const ConnectionScreen: FunctionComponent = () => {
+    const state = useSelector((state) => state)
+    const dispatch = useDispatch()
     const [name, setName] = React.useState('')
     const [username, setUsername] = React.useState('')
     const [password, setPassword] = React.useState('')
@@ -41,11 +79,12 @@ export const ConnectionScreen: FunctionComponent = () => {
     const onConnectionSubmit = (e: React.FormEvent) => {
         console.log('submitted!')
         e.preventDefault()
+        dispatch({ type: 'ADD_TODO', text: 'hi' })
     }
 
     return (
-        <div>
-            <form onSubmit={onConnectionSubmit}>
+        <ConnectionScreenWrapper>
+            <ConnectionForm onSubmit={onConnectionSubmit}>
                 <ConnectionInput
                     onChange={(e: Event) => setName(e.target.value)}
                     value={name}
@@ -82,9 +121,8 @@ export const ConnectionScreen: FunctionComponent = () => {
                     name={'port'}
                     label={'Port:'}
                 />
-
-                <button type={'submit'}>Connect</button>
-            </form>
-        </div>
+                <Button type={'submit'}>Connect</Button>
+            </ConnectionForm>
+        </ConnectionScreenWrapper>
     )
 }

@@ -1,3 +1,5 @@
+const path = require('path')
+
 const rules = require('./webpack.rules')
 const plugins = require('./webpack.plugins')
 
@@ -13,5 +15,6 @@ module.exports = {
     plugins: plugins,
     resolve: {
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+        modules: [path.join(__dirname, 'src'), 'node_modules'],
     },
 }
