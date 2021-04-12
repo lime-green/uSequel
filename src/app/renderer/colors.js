@@ -16,6 +16,7 @@ export const Theme = {
     BG_SECONDARY: null,
     BG_SIDEBAR: null,
     FG: null,
+    FOCUS: Colors.BLUE_PRIMARY,
 }
 if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
     Object.assign(Theme, {

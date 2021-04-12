@@ -1,16 +1,17 @@
 import { PayloadAction } from '@reduxjs/toolkit'
-import { call, put, takeEvery } from 'redux-saga/effects'
+import { call, put, takeLatest } from 'redux-saga/effects'
 
 import {
     Connect,
     ListDatabases,
     ListTables,
+    SelectTableAction,
     connectionSlice,
-} from 'app/redux/slice'
+    layoutSlice,
+} from 'app/redux'
 import { sqlClientFactory } from 'lib/db'
 
 const activeConnections = {}
-
 const hasActiveConnection = (connectionId) => {
     return Boolean(activeConnections[connectionId])
 }
@@ -103,12 +104,32 @@ function* listDatabases(action: PayloadAction<ListDatabases>) {
     }
 }
 
+function* fetchInitialTableInfo(action: PayloadAction<SelectTableAction>) {
+    const { tabId, table, database } = action.payload
+
+    if (hasActiveConnection(tabId)) {
+        const sql = getConnection(tabId)
+        const rows = yield call(sql.fetchTableRows, table, 100)
+        yield put(
+            connectionSlice.actions.fetchTableRowsSuccess(
+                tabId,
+                table,
+                rows,
+                database,
+            ),
+        )
+    } else {
+        throw new Error('no connection')
+    }
+}
+
 function* sagaWorker() {
-    yield takeEvery(
+    yield takeLatest(
         connectionSlice.actions.attemptConnection,
         attemptConnection,
     )
-    yield takeEvery(connectionSlice.actions.listDatabases, listDatabases)
+    yield takeLatest(connectionSlice.actions.listDatabases, listDatabases)
+    yield takeLatest(layoutSlice.actions.selectTable, fetchInitialTableInfo)
 }
 
 export default sagaWorker

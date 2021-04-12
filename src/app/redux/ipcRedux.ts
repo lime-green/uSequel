@@ -45,7 +45,7 @@ export const connectIPCRedux = (
     const store = createStore([ipcMiddleware, sagaMiddleware])
 
     ipcReceive(REDUX_IPC_CHANNEL, (event: any, action: AnyAction) => {
-        console.log('RECEIVED ACTION', action)
+        console.debug('RECEIVED ACTION', action)
         store.dispatch(action)
     })
     sagaMiddleware.run(saga)
@@ -54,10 +54,11 @@ export const connectIPCRedux = (
 
 const createElectronIPCMiddleware = (ipcSend: (...args) => void) => {
     return (store) => (next) => (action) => {
-        const reduxKey = '__electronIPCProxy'
+        const actionSentinelKey = '__electronIPCProxied'
 
-        if (!action[reduxKey]) {
-            ipcSend(REDUX_IPC_CHANNEL, { ...action, [reduxKey]: true })
+        if (!action[actionSentinelKey]) {
+            console.debug('FORWARDING ACTION', action)
+            ipcSend(REDUX_IPC_CHANNEL, { ...action, [actionSentinelKey]: true })
         }
 
         console.log(store.getState())

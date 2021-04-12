@@ -1,5 +1,11 @@
 import { PayloadAction, createSlice } from '@reduxjs/toolkit'
 
+export type TableRowData = [
+    {
+        [key: string]: any
+    },
+]
+
 export type connectionState = {
     [connectionId: string]: {
         currentDatabase: string
@@ -9,6 +15,11 @@ export type connectionState = {
         databaseData: {
             [databaseId: string]: {
                 tables: string[]
+                tableData: {
+                    [table: string]: {
+                        rows: TableRowData
+                    }
+                }
             }
         }
     }
@@ -38,6 +49,13 @@ export type ListTablesSuccess = {
     connectionId: string
     database: string
     tables: string[]
+}
+
+export type FetchTableRowsSuccess = {
+    connectionId: string
+    table: string
+    rows: TableRowData
+    database: string
 }
 
 const initialState = {
@@ -77,6 +95,22 @@ export const connectionSlice = createSlice({
                 return { payload: { connectionId, database } }
             },
         },
+        fetchTableRowsSuccess: {
+            reducer: (state, action: PayloadAction<FetchTableRowsSuccess>) => {
+                const { connectionId, table, rows, database } = action.payload
+                state[connectionId].databaseData[database].tableData[
+                    table
+                ].rows = rows
+            },
+            prepare: (
+                connectionId: string,
+                table: string,
+                rows: TableRowData,
+                database: string,
+            ) => {
+                return { payload: { connectionId, table, rows, database } }
+            },
+        },
         listDatabases: {
             reducer: (state) => {
                 return state
@@ -92,6 +126,7 @@ export const connectionSlice = createSlice({
                 action.payload.databases.forEach((db) => {
                     state[action.payload.connectionId].databaseData[db] = {
                         tables: null,
+                        tableData: {},
                     }
                 })
             },
@@ -111,6 +146,11 @@ export const connectionSlice = createSlice({
             reducer: (state, action: PayloadAction<ListTablesSuccess>) => {
                 const { connectionId, database, tables } = action.payload
                 state[connectionId].databaseData[database].tables = tables
+                tables.forEach((table) => {
+                    state[connectionId].databaseData[database].tableData[
+                        table
+                    ] = { rows: null }
+                })
             },
             prepare: (
                 connectionId: string,

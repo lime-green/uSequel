@@ -15,6 +15,7 @@ export class MySQLClient extends SQLClient {
                 database,
                 user: username,
                 password,
+                dateStrings: true,
             }),
         )
     }
@@ -49,8 +50,21 @@ export class MySQLClient extends SQLClient {
             this.connection.driver.query,
             'show tables',
         ).then(([results]) => {
-            console.log(results.map((row) => row.Tables_in_mysql))
             return results.map((row) => row.Tables_in_mysql)
         })
+    }
+
+    fetchTableRows = (
+        table: string,
+        limit: number,
+    ): Promise<Record<string, any>[]> => {
+        const query = `select * from ${table} limit ${limit}`
+        console.debug('Making query:', query)
+
+        return this.sendDriver(this.connection.driver.query, query).then(
+            ([results]) => {
+                return results.map((row) => ({ ...row }))
+            },
+        )
     }
 }

@@ -12,4 +12,8 @@ export abstract class SQLClient {
     abstract close(): Promise<void>
     abstract listDatabases(): Promise<string[]>
     abstract listTables(): Promise<string[]>
+    abstract fetchTableRows(
+        table: string,
+        limit: number,
+    ): Promise<Record<string, any>[]>
 }

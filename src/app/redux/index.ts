@@ -1,3 +1,3 @@
 export * from './ipcRedux'
-export * from './slice'
+export * from './slices'
 export * from './selectors'

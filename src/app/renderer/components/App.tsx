@@ -1,9 +1,12 @@
 import React, { FunctionComponent } from 'react'
 import styled from 'styled-components'
+import { useDispatch, useSelector } from 'react-redux'
 
+import { selectShouldShowConnectScreen } from 'app/redux'
 import { SideBar } from 'app/renderer/components/SideBar'
 
 import { ConnectionScreen } from './ConnectionScreen'
+import { ConnectedScreen } from './ConnectedScreen'
 
 const AppWrapper = styled.div`
     display: flex;
@@ -23,9 +26,10 @@ const SideBarContainer = styled.div`
     display: flex;
     width: 20%;
     height: 100%;
+    overflow: hidden;
 `
 
-const ConnectionScreenContainer = styled.div`
+const MainScreenContainer = styled.div`
     display: flex;
     width: 100%;
     height: 100%;
@@ -34,6 +38,7 @@ const ConnectionScreenContainer = styled.div`
 `
 
 export const App: FunctionComponent = () => {
+    const showConnectScreen = useSelector(selectShouldShowConnectScreen)
     return (
         <AppWrapper>
             <Content>
@@ -41,9 +46,13 @@ export const App: FunctionComponent = () => {
                     <SideBar />
                 </SideBarContainer>
 
-                <ConnectionScreenContainer>
-                    <ConnectionScreen />
-                </ConnectionScreenContainer>
+                <MainScreenContainer>
+                    {showConnectScreen ? (
+                        <ConnectionScreen />
+                    ) : (
+                        <ConnectedScreen />
+                    )}
+                </MainScreenContainer>
             </Content>
         </AppWrapper>
     )

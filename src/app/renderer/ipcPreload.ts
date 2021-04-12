@@ -11,9 +11,9 @@ contextBridge.exposeInMainWorld('ipc', {
         }
     },
     receive: (channel: string, cb: (...args: any[]) => any[]) => {
-        console.log('LISTENING!!!')
         const allowedChannels = [REDUX_IPC_CHANNEL]
         if (allowedChannels.includes(channel)) {
+            ipcRenderer.removeAllListeners(channel)
             ipcRenderer.on(channel, (event, ...args) => cb(null, ...args))
         }
     },
