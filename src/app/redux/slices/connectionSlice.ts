@@ -6,6 +6,18 @@ export type TableRowData = [
     },
 ]
 
+export type ColumnInfo = [
+    {
+        name: string
+        field: string
+        type: string
+        isNull: boolean
+        isPrimary: boolean
+        isUnique: boolean
+        default: string
+    },
+]
+
 export type connectionState = {
     [connectionId: string]: {
         currentDatabase: string
@@ -17,7 +29,10 @@ export type connectionState = {
                 tables: string[]
                 tableData: {
                     [table: string]: {
+                        currentOffset: number
+                        count: number
                         rows: TableRowData
+                        columnInfo: ColumnInfo
                     }
                 }
             }
@@ -55,6 +70,15 @@ export type FetchTableRowsSuccess = {
     connectionId: string
     table: string
     rows: TableRowData
+    database: string
+    columnInfo: ColumnInfo
+    offset: number
+}
+
+export type FetchTableCountSuccess = {
+    connectionId: string
+    table: string
+    count: number
     database: string
 }
 
@@ -97,18 +121,62 @@ export const connectionSlice = createSlice({
         },
         fetchTableRowsSuccess: {
             reducer: (state, action: PayloadAction<FetchTableRowsSuccess>) => {
-                const { connectionId, table, rows, database } = action.payload
-                state[connectionId].databaseData[database].tableData[
-                    table
-                ].rows = rows
+                const {
+                    connectionId,
+                    table,
+                    rows,
+                    database,
+                    columnInfo,
+                    offset,
+                } = action.payload
+                state[connectionId].databaseData[database].tableData[table] = {
+                    count: null,
+                    currentOffset: offset,
+                    rows: rows,
+                    columnInfo: columnInfo,
+                }
             },
             prepare: (
                 connectionId: string,
                 table: string,
                 rows: TableRowData,
                 database: string,
+                columnInfo: ColumnInfo,
+                offset: number,
             ) => {
-                return { payload: { connectionId, table, rows, database } }
+                return {
+                    payload: {
+                        connectionId,
+                        table,
+                        rows,
+                        database,
+                        columnInfo,
+                        offset,
+                    },
+                }
+            },
+        },
+        fetchTableCountSuccess: {
+            reducer: (state, action: PayloadAction<FetchTableCountSuccess>) => {
+                const { connectionId, table, count, database } = action.payload
+                state[connectionId].databaseData[database].tableData[
+                    table
+                ].count = count
+            },
+            prepare: (
+                connectionId: string,
+                table: string,
+                count: number,
+                database: string,
+            ) => {
+                return {
+                    payload: {
+                        connectionId,
+                        table,
+                        count,
+                        database,
+                    },
+                }
             },
         },
         listDatabases: {
@@ -117,6 +185,51 @@ export const connectionSlice = createSlice({
             },
             prepare: (connectionId: string) => {
                 return { payload: { connectionId } }
+            },
+        },
+        nextPage: {
+            reducer: (state) => {
+                return state
+            },
+            prepare: (
+                connectionId: string,
+                database: string,
+                table: string,
+                currentOffset: number,
+            ) => {
+                return {
+                    payload: { connectionId, database, table, currentOffset },
+                }
+            },
+        },
+        previousPage: {
+            reducer: (state) => {
+                return state
+            },
+            prepare: (
+                connectionId: string,
+                database: string,
+                table: string,
+                currentOffset: number,
+            ) => {
+                return {
+                    payload: { connectionId, database, table, currentOffset },
+                }
+            },
+        },
+        refreshPage: {
+            reducer: (state) => {
+                return state
+            },
+            prepare: (
+                connectionId: string,
+                database: string,
+                table: string,
+                currentOffset: number,
+            ) => {
+                return {
+                    payload: { connectionId, database, table, currentOffset },
+                }
             },
         },
         listDatabasesSuccess: {
@@ -149,7 +262,12 @@ export const connectionSlice = createSlice({
                 tables.forEach((table) => {
                     state[connectionId].databaseData[database].tableData[
                         table
-                    ] = { rows: null }
+                    ] = {
+                        count: null,
+                        rows: null,
+                        columnInfo: null,
+                        currentOffset: 0,
+                    }
                 })
             },
             prepare: (

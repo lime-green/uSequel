@@ -61,7 +61,7 @@ const createElectronIPCMiddleware = (ipcSend: (...args) => void) => {
             ipcSend(REDUX_IPC_CHANNEL, { ...action, [actionSentinelKey]: true })
         }
 
-        console.log(store.getState())
         next(action)
+        console.log(store.getState())
     }
 }

@@ -35,6 +35,7 @@ const MainScreenContainer = styled.div`
     height: 100%;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
 `
 
 export const App: FunctionComponent = () => {

@@ -1,8 +1,10 @@
 import React, { FunctionComponent } from 'react'
 import styled from 'styled-components'
 import { useDispatch, useSelector } from 'react-redux'
+import debounce from 'lodash.debounce'
 
 import {
+    connectionSlice,
     layoutSlice,
     selectCurrentDatabase,
     selectCurrentTabId,
@@ -41,15 +43,16 @@ const TableNameList = styled.div`
 `
 
 const TableName = styled.div`
-    padding: 2px;
+    padding: 2px 10px;
     text-overflow: ellipsis;
     overflow: hidden;
-    border-radius: 5px;
+    border-radius: 7px;
 
     &:hover,
     &:focus {
         cursor: pointer;
         background-color: ${Theme.FOCUS};
+        outline: none;
     }
 
     background-color: ${(props: any) =>
@@ -71,10 +74,15 @@ const TableSearchInput = styled.input`
 
 export const SideBar: FunctionComponent = () => {
     const dispatch = useDispatch()
+    const [tableFilter, setTableFilter] = React.useState('')
     const currentDatabase = useSelector(selectCurrentDatabase)
     const currentTabId = useSelector(selectCurrentTabId)
     const currentTable = useSelector(selectCurrentTable)
     const tables = useSelector(selectTables)
+    const debouncedTableFilter = React.useCallback(
+        debounce((filter) => setTableFilter(filter), 150),
+        [],
+    )
     const selectTable = (tableName) => {
         dispatch(
             layoutSlice.actions.selectTable(
@@ -92,27 +100,33 @@ export const SideBar: FunctionComponent = () => {
                     type={'text'}
                     name={'table'}
                     placeholder={'Filter'}
+                    onChange={(e) => {
+                        const filter = e.currentTarget.value.trim()
+                        debouncedTableFilter(filter)
+                    }}
                 />
             </TableSearchWrapper>
             <TableList>
                 <TableHeader>TABLES</TableHeader>
                 <TableNameList>
-                    {tables.map((tableName) => (
-                        <TableName
-                            onClick={() => selectTable(tableName)}
-                            onKeyUp={(e) => {
-                                if (e.key === 'Enter') {
-                                    selectTable(tableName)
-                                }
-                            }}
-                            tabIndex={0}
-                            title={tableName}
-                            key={tableName}
-                            isCurrentTable={tableName === currentTable}
-                        >
-                            {tableName}
-                        </TableName>
-                    ))}
+                    {tables
+                        .filter((tableName) => tableName.includes(tableFilter))
+                        .map((tableName) => (
+                            <TableName
+                                onClick={() => selectTable(tableName)}
+                                onKeyUp={(e) => {
+                                    if (e.key === 'Enter') {
+                                        selectTable(tableName)
+                                    }
+                                }}
+                                tabIndex={0}
+                                title={tableName}
+                                key={tableName}
+                                isCurrentTable={tableName === currentTable}
+                            >
+                                {tableName}
+                            </TableName>
+                        ))}
                 </TableNameList>
             </TableList>
         </SideBarWrapper>

@@ -16,6 +16,7 @@ export class MySQLClient extends SQLClient {
                 user: username,
                 password,
                 dateStrings: true,
+                stringifyObjects: true,
             }),
         )
     }
@@ -57,13 +58,79 @@ export class MySQLClient extends SQLClient {
     fetchTableRows = (
         table: string,
         limit: number,
+        offset = 0,
     ): Promise<Record<string, any>[]> => {
-        const query = `select * from ${table} limit ${limit}`
+        const query = `select * from ${table} limit ${limit} offset ${offset}`
         console.debug('Making query:', query)
 
         return this.sendDriver(this.connection.driver.query, query).then(
             ([results]) => {
-                return results.map((row) => ({ ...row }))
+                const decoder = new TextDecoder('utf-8', {
+                    fatal: true,
+                })
+                const normalizeRow = (row) => {
+                    const normalizedRow = { ...row }
+                    Object.entries(normalizedRow).forEach(([k, v]) => {
+                        if (v instanceof Buffer) {
+                            try {
+                                normalizedRow[k] = decoder.decode(v)
+                            } catch {
+                                normalizedRow[k] = `0x${v.toString('hex')}`
+                            }
+                        }
+                    })
+                    return normalizedRow
+                }
+                return results.map((row) => normalizeRow(row))
+            },
+        )
+    }
+
+    fetchCount = (table: string): Promise<number> => {
+        const query = `select count(1) from ${table}`
+        console.debug('Making query:', query)
+
+        return this.sendDriver(this.connection.driver.query, query).then(
+            ([results]) => {
+                return Number(Object.values(results[0])[0])
+            },
+        )
+    }
+
+    getColumnInfo = (table: string): Promise<Record<string, any>[]> => {
+        const query = `show columns from ${table}`
+        console.debug('Making query:', query)
+
+        return this.sendDriver(this.connection.driver.query, query).then(
+            ([results]) => {
+                return results
+                    .map((row) => ({ ...row }))
+                    .reduce(
+                        (agg, column) => [
+                            ...agg,
+                            {
+                                name: column.Field,
+                                type: column.Type,
+                                isNull: column.Null === 'YES',
+                                isPrimary: column.Key === 'PRI',
+                                isUnique: column.Key === 'UNI',
+                                default: column.Default,
+                            },
+                        ],
+                        [],
+                    )
+            },
+        )
+    }
+
+    searchTables = (lookup: string): Promise<string[]> => {
+        const query = `show tables like '%${lookup}%'`
+        console.debug('Making query:', query)
+
+        return this.sendDriver(this.connection.driver.query, query).then(
+            ([results]) => {
+                console.log(results)
+                return results.map((row) => row.Tables_in_mysql)
             },
         )
     }

@@ -25,6 +25,8 @@ const removeConnection = (connectionId) => {
     delete activeConnections[connectionId]
 }
 
+const defaultLimit = 100
+
 function* attemptConnection(action: PayloadAction<Connect>) {
     const { connectionId } = action.payload
     const database = 'mysql'
@@ -109,18 +111,80 @@ function* fetchInitialTableInfo(action: PayloadAction<SelectTableAction>) {
 
     if (hasActiveConnection(tabId)) {
         const sql = getConnection(tabId)
-        const rows = yield call(sql.fetchTableRows, table, 100)
+        const columnInfo = yield call(sql.getColumnInfo, table)
+        const rows = yield call(sql.fetchTableRows, table, defaultLimit)
         yield put(
             connectionSlice.actions.fetchTableRowsSuccess(
                 tabId,
                 table,
                 rows,
                 database,
+                columnInfo,
+                0,
+            ),
+        )
+        const count = yield call(sql.fetchCount, table)
+        yield put(
+            connectionSlice.actions.fetchTableCountSuccess(
+                tabId,
+                table,
+                count,
+                database,
             ),
         )
     } else {
         throw new Error('no connection')
     }
+}
+
+function* fetchPageHelper(action: PayloadAction<any>, offset: number) {
+    const { connectionId, database, table } = action.payload
+
+    if (hasActiveConnection(connectionId)) {
+        const sql = getConnection(connectionId)
+        const columnInfo = yield call(sql.getColumnInfo, table)
+        const rows = yield call(sql.fetchTableRows, table, defaultLimit, offset)
+        yield put(
+            connectionSlice.actions.fetchTableRowsSuccess(
+                connectionId,
+                table,
+                rows,
+                database,
+                columnInfo,
+                offset,
+            ),
+        )
+        const count = yield call(sql.fetchCount, table)
+        yield put(
+            connectionSlice.actions.fetchTableCountSuccess(
+                connectionId,
+                table,
+                count,
+                database,
+            ),
+        )
+    } else {
+        throw new Error('no connection')
+    }
+}
+
+function* fetchNextPage(action: PayloadAction<any>) {
+    const { currentOffset } = action.payload
+    yield call(fetchPageHelper, action, currentOffset + defaultLimit)
+}
+
+function* fetchPreviousPage(action: PayloadAction<any>) {
+    const { currentOffset } = action.payload
+    yield call(
+        fetchPageHelper,
+        action,
+        Math.max(currentOffset - defaultLimit, 0),
+    )
+}
+
+function* refreshPage(action: PayloadAction<any>) {
+    const { currentOffset } = action.payload
+    yield call(fetchPageHelper, action, currentOffset)
 }
 
 function* sagaWorker() {
@@ -130,6 +194,9 @@ function* sagaWorker() {
     )
     yield takeLatest(connectionSlice.actions.listDatabases, listDatabases)
     yield takeLatest(layoutSlice.actions.selectTable, fetchInitialTableInfo)
+    yield takeLatest(connectionSlice.actions.nextPage, fetchNextPage)
+    yield takeLatest(connectionSlice.actions.previousPage, fetchPreviousPage)
+    yield takeLatest(connectionSlice.actions.refreshPage, refreshPage)
 }
 
 export default sagaWorker

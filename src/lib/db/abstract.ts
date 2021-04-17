@@ -15,5 +15,9 @@ export abstract class SQLClient {
     abstract fetchTableRows(
         table: string,
         limit: number,
+        offset: number,
     ): Promise<Record<string, any>[]>
+    abstract fetchCount(table: string): Promise<number>
+    abstract getColumnInfo(table: string): Promise<Record<string, any>[]>
+    abstract searchTables(lookup: string): Promise<string[]>
 }

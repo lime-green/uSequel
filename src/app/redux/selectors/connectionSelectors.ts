@@ -43,5 +43,23 @@ export const selectTableData = createSelector(
 export const selectTableRows = createSelector(
     selectCurrentTable,
     selectTableData,
-    (currentTable, tableData) => tableData[currentTable]?.rows,
+    (currentTable, tableData) => tableData[currentTable]?.rows || [],
+)
+
+export const selectTableColumnInfo = createSelector(
+    selectCurrentTable,
+    selectTableData,
+    (currentTable, tableData) => tableData[currentTable]?.columnInfo || [],
+)
+
+export const selectRowCount = createSelector(
+    selectCurrentTable,
+    selectTableData,
+    (currentTable, tableData) => tableData[currentTable]?.count,
+)
+
+export const selectCurrentOffset = createSelector(
+    selectCurrentTable,
+    selectTableData,
+    (currentTable, tableData) => tableData[currentTable]?.currentOffset,
 )

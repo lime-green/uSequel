@@ -17,6 +17,7 @@
         "jsx": "react"
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "image.d.ts",
     ]
 }
