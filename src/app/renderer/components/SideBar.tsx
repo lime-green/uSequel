@@ -62,6 +62,7 @@ const TableName = styled.div`
 const TableSearchWrapper = styled.div`
     display: flex;
     padding: 5px;
+    border: 1px solid ${Theme.ACCENT};
 `
 
 const TableSearchInput = styled.input`

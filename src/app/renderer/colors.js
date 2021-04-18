@@ -8,6 +8,7 @@ export const Colors = {
     BOKARA_GREY: '#2d2723',
     ACADIA: '#342e2a',
     JAGUAR: '#2c292b',
+    DARK_BLUE: '#0c2d48',
 }
 
 export const Theme = {
@@ -17,6 +18,7 @@ export const Theme = {
     BG_SIDEBAR: null,
     FG: null,
     FOCUS: Colors.BLUE_PRIMARY,
+    FOCUS_SECONDARY: Colors.DARK_BLUE,
 }
 if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
     Object.assign(Theme, {

@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from 'react'
+import React, { Component, FunctionComponent } from 'react'
 import { connect, useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
 
@@ -46,9 +46,19 @@ const Row = styled.div`
 
     &:nth-child(even) {
         background: ${Theme.ACCENT};
+        input {
+            background: ${Theme.ACCENT};
+        }
     }
     &:nth-child(odd) {
         background: ${Theme.BG_SIDEBAR};
+        input {
+            background: ${Theme.BG_SIDEBAR};
+        }
+    }
+    &&& {
+        ${(props: any) =>
+            props.selected && `&, input { background: ${Theme.FOCUS}; }`}
     }
 ` as any
 
@@ -58,7 +68,32 @@ const Column = styled.div`
     text-overflow: ellipsis;
     width: ${(props: any) => props.width}px;
     min-width: 100px;
-    padding: 1px 5px;
+    padding: 0 5px;
+
+    &:hover {
+        background: ${(props: any) =>
+            props.hasData ? Theme.FOCUS_SECONDARY : 'inherit'};
+
+        input {
+            background: ${(props: any) =>
+                props.hasData ? Theme.FOCUS_SECONDARY : 'inherit'};
+        }
+    }
+
+    span,
+    input {
+        font-size: 14px;
+        line-height: 20px;
+    }
+
+    input {
+        outline: none;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: none;
+        font-size: 14px;
+    }
 ` as any
 
 const ConnectedScreenWrapper = styled.div`
@@ -75,6 +110,7 @@ const ColumnInfoRow = styled(Row)`
     position: sticky;
     top: 0;
     left: 0;
+    font-weight: bold;
 `
 
 const ColumnInfoColumn = styled(Column)`
@@ -82,6 +118,11 @@ const ColumnInfoColumn = styled(Column)`
 
     &:hover {
         cursor: default;
+    }
+
+    &&& {
+        background: ${({ isOrdered }) =>
+            isOrdered ? Theme.FOCUS : 'inherited'};
     }
 `
 
@@ -161,13 +202,21 @@ type RowsProps = {
 class UnconnectedRows extends React.Component<RowsProps> {
     rowHeight = 20
     tableRef = null
+    columnClickTimeout = null
+
+    state = {
+        editingColumn: null,
+        rowSelected: null,
+    }
 
     constructor(props) {
         super(props)
         this.tableRef = React.createRef()
     }
 
-    shouldComponentUpdate(nextProps: Readonly<RowsProps>): boolean {
+    shouldComponentUpdate(nextProps: Readonly<RowsProps>, nextState): boolean {
+        if (nextState.rowSelected !== this.state.rowSelected) return true
+        if (nextState.editingColumn !== this.state.editingColumn) return true
         if (nextProps.orderedByType !== this.props.orderedByType) return true
         if (nextProps.orderedByColumn !== this.props.orderedByColumn)
             return true
@@ -185,6 +234,12 @@ class UnconnectedRows extends React.Component<RowsProps> {
             })
         }
         return false
+    }
+
+    componentDidUpdate(prevProps: Readonly<RowsProps>) {
+        if (prevProps.isLoading && !this.props.isLoading) {
+            this.setState({ rowSelected: null, editingColumn: null })
+        }
     }
 
     get numRows() {
@@ -205,14 +260,14 @@ class UnconnectedRows extends React.Component<RowsProps> {
         if (!tableColumnInfo.length) return widths
 
         const numCharsToWidth = (numChars) => {
-            if (!numChars) return 10
-            const width = numChars * 10
+            if (!numChars) return 9
+            const width = numChars * 9
             return Math.min(width, 450)
         }
 
         for (let j = 0; j < numCols; j++) {
             const col = tableColumnInfo[j].name
-            const width = numCharsToWidth(col.length)
+            const width = numCharsToWidth(col.length + 2)
             if (!widths[j] || width > widths[j]) {
                 widths[j] = width
             }
@@ -277,6 +332,7 @@ class UnconnectedRows extends React.Component<RowsProps> {
                                 getOrderByType(columnInfo),
                             )
                         }
+                        isOrdered={orderedByColumn === columnInfo.name}
                         key={columnInfo.name}
                         width={columnWidths[j]}
                     >
@@ -293,20 +349,54 @@ class UnconnectedRows extends React.Component<RowsProps> {
         )
     }
 
+    handleRowClicked = (row, rowId) => {
+        if (!row.length) {
+            this.setState({ rowSelected: null, editingColumn: null })
+        } else {
+            this.setState({ rowSelected: rowId, editingColumn: null })
+        }
+    }
+
+    renderColumnBody = (col, columnId, hasData) => {
+        if (hasData) {
+            return (
+                <Input
+                    onSubmit={(val) => this.setState({ rowSelected: null })}
+                    value={col}
+                />
+            )
+        } else {
+            return <span />
+        }
+    }
+
     renderRows = (columnWidths) => {
         const { tableRows } = this.props
 
         return Array.from(Array(this.numRows)).map((_, i) => {
             const row = Object.values(tableRows[i] || {})
+            const rowKey = this.getRowKey(row, i)
+
             return (
-                <Row key={this.getRowKey(row, i)} height={this.rowHeight}>
+                <Row
+                    onClick={() => this.handleRowClicked(row, rowKey)}
+                    key={rowKey}
+                    height={this.rowHeight}
+                    selected={rowKey === this.state.rowSelected}
+                >
                     {Array.from(Array(this.numCols)).map((_, j) => {
+                        const col = row[j]
+                        const columnKey = this.getColumnKey(j)
+                        const hasData = typeof col !== 'undefined'
+                        const columnId = `${rowKey}-${columnKey}`
+
                         return (
                             <Column
-                                key={this.getColumnKey(j)}
+                                hasData={hasData}
+                                key={columnKey}
                                 width={columnWidths[j]}
                             >
-                                {row[j]}
+                                {this.renderColumnBody(col, columnId, hasData)}
                             </Column>
                         )
                     })}
@@ -429,6 +519,74 @@ const Footer = () => {
             </FooterRight>
         </FooterWrapper>
     )
+}
+
+type InputProps = {
+    onSubmit
+    value: string
+}
+
+const InputWrapper = styled.input`
+    text-overflow: ellipsis;
+`
+
+class Input extends Component<InputProps> {
+    ref = null
+    state = {
+        disabled: true,
+        value: this.props.value,
+    }
+
+    constructor(props) {
+        super(props)
+        this.ref = React.createRef() as React.RefObject<any>
+    }
+
+    componentDidUpdate(
+        prevProps: Readonly<InputProps>,
+        prevState: Readonly<any>,
+    ) {
+        if (prevState.disabled && !this.state.disabled) {
+            this.ref.current.focus()
+        }
+    }
+
+    render() {
+        const { disabled } = this.state
+
+        return (
+            <span
+                onDoubleClick={() => {
+                    this.setState({ disabled: false })
+                }}
+            >
+                <InputWrapper
+                    disabled={disabled}
+                    onBlur={() => this.setState({ disabled: true })}
+                    onKeyUp={(e) => {
+                        if (e.key === 'Enter') {
+                            document.getSelection().empty()
+                            this.setState({ disabled: true })
+                            this.props.onSubmit(this.state.value)
+                        }
+                    }}
+                    type={'text'}
+                    onChange={(e) =>
+                        this.setState({ value: e.currentTarget.value })
+                    }
+                    onFocus={(e) => {
+                        if (disabled) {
+                            e.currentTarget.blur()
+                        } else {
+                            e.currentTarget.select()
+                        }
+                    }}
+                    value={this.state.value === null ? '' : this.state.value}
+                    ref={this.ref}
+                />
+            </span>
+        )
+    }
 }
 
 const Rows = connect(
