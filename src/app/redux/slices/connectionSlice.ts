@@ -29,6 +29,9 @@ export type connectionState = {
                 tables: string[]
                 tableData: {
                     [table: string]: {
+                        orderedByColumn: string | null
+                        orderedByType: 'asc' | 'desc' | null
+                        loading: boolean
                         currentOffset: number
                         count: number
                         rows: TableRowData
@@ -73,13 +76,18 @@ export type FetchTableRowsSuccess = {
     database: string
     columnInfo: ColumnInfo
     offset: number
+    count: number
+    orderedByColumn: string | null
+    orderedByType: 'asc' | 'desc' | null
 }
 
-export type FetchTableCountSuccess = {
+export type OrderBy = {
     connectionId: string
-    table: string
-    count: number
     database: string
+    table: string
+    currentOffset: number
+    orderByColumn: string | null
+    orderByType: 'asc' | 'desc' | null
 }
 
 const initialState = {
@@ -128,12 +136,19 @@ export const connectionSlice = createSlice({
                     database,
                     columnInfo,
                     offset,
+                    count,
+                    orderedByColumn,
+                    orderedByType,
                 } = action.payload
+
                 state[connectionId].databaseData[database].tableData[table] = {
-                    count: null,
+                    count,
+                    loading: false,
                     currentOffset: offset,
                     rows: rows,
                     columnInfo: columnInfo,
+                    orderedByColumn,
+                    orderedByType,
                 }
             },
             prepare: (
@@ -143,6 +158,9 @@ export const connectionSlice = createSlice({
                 database: string,
                 columnInfo: ColumnInfo,
                 offset: number,
+                count: number,
+                orderedByColumn: string | null,
+                orderedByType: 'asc' | 'desc' | null,
             ) => {
                 return {
                     payload: {
@@ -152,29 +170,9 @@ export const connectionSlice = createSlice({
                         database,
                         columnInfo,
                         offset,
-                    },
-                }
-            },
-        },
-        fetchTableCountSuccess: {
-            reducer: (state, action: PayloadAction<FetchTableCountSuccess>) => {
-                const { connectionId, table, count, database } = action.payload
-                state[connectionId].databaseData[database].tableData[
-                    table
-                ].count = count
-            },
-            prepare: (
-                connectionId: string,
-                table: string,
-                count: number,
-                database: string,
-            ) => {
-                return {
-                    payload: {
-                        connectionId,
-                        table,
                         count,
-                        database,
+                        orderedByColumn,
+                        orderedByType,
                     },
                 }
             },
@@ -188,47 +186,114 @@ export const connectionSlice = createSlice({
             },
         },
         nextPage: {
-            reducer: (state) => {
-                return state
+            reducer: (state, action: PayloadAction<any>) => {
+                const { connectionId, table, database } = action.payload
+
+                state[connectionId].databaseData[database].tableData[
+                    table
+                ].loading = true
             },
             prepare: (
                 connectionId: string,
                 database: string,
                 table: string,
                 currentOffset: number,
+                orderByColumn: string | null,
+                orderByType: 'asc' | 'desc' | null,
             ) => {
                 return {
-                    payload: { connectionId, database, table, currentOffset },
+                    payload: {
+                        connectionId,
+                        database,
+                        table,
+                        currentOffset,
+                        orderByColumn,
+                        orderByType,
+                    },
                 }
             },
         },
         previousPage: {
-            reducer: (state) => {
-                return state
+            reducer: (state, action: PayloadAction<any>) => {
+                const { connectionId, table, database } = action.payload
+
+                state[connectionId].databaseData[database].tableData[
+                    table
+                ].loading = true
             },
             prepare: (
                 connectionId: string,
                 database: string,
                 table: string,
                 currentOffset: number,
+                orderByColumn: string | null,
+                orderByType: 'asc' | 'desc' | null,
             ) => {
                 return {
-                    payload: { connectionId, database, table, currentOffset },
+                    payload: {
+                        connectionId,
+                        database,
+                        table,
+                        currentOffset,
+                        orderByColumn,
+                        orderByType,
+                    },
                 }
             },
         },
         refreshPage: {
-            reducer: (state) => {
-                return state
+            reducer: (state, action: PayloadAction<any>) => {
+                const { connectionId, table, database } = action.payload
+
+                state[connectionId].databaseData[database].tableData[
+                    table
+                ].loading = true
             },
             prepare: (
                 connectionId: string,
                 database: string,
                 table: string,
                 currentOffset: number,
+                orderByColumn: string | null,
+                orderByType: 'asc' | 'desc' | null,
             ) => {
                 return {
-                    payload: { connectionId, database, table, currentOffset },
+                    payload: {
+                        connectionId,
+                        database,
+                        table,
+                        currentOffset,
+                        orderByColumn,
+                        orderByType,
+                    },
+                }
+            },
+        },
+        orderBy: {
+            reducer: (state, action: PayloadAction<OrderBy>) => {
+                const { connectionId, table, database } = action.payload
+
+                state[connectionId].databaseData[database].tableData[
+                    table
+                ].loading = true
+            },
+            prepare: (
+                connectionId: string,
+                database: string,
+                table: string,
+                currentOffset: number,
+                orderByColumn: string | null,
+                orderByType: 'asc' | 'desc' | null,
+            ) => {
+                return {
+                    payload: {
+                        connectionId,
+                        database,
+                        table,
+                        currentOffset,
+                        orderByColumn,
+                        orderByType,
+                    },
                 }
             },
         },
@@ -248,7 +313,7 @@ export const connectionSlice = createSlice({
             },
         },
         listTables: {
-            reducer: (state, action: PayloadAction<ListTables>) => {
+            reducer: (state) => {
                 return state
             },
             prepare: (connectionId: string, database: string) => {
@@ -263,10 +328,13 @@ export const connectionSlice = createSlice({
                     state[connectionId].databaseData[database].tableData[
                         table
                     ] = {
+                        loading: false,
                         count: null,
                         rows: null,
                         columnInfo: null,
                         currentOffset: 0,
+                        orderedByColumn: null,
+                        orderedByType: null,
                     }
                 })
             },
@@ -278,5 +346,11 @@ export const connectionSlice = createSlice({
                 return { payload: { connectionId, database, tables } }
             },
         },
+    },
+    extraReducers: (builder) => {
+        builder.addCase('layout/selectTable', (state, action: any) => {
+            const { database, tabId, table } = action.payload
+            state[tabId].databaseData[database].tableData[table].loading = true
+        })
     },
 })

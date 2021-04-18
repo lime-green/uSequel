@@ -5,6 +5,7 @@ import {
     Connect,
     ListDatabases,
     ListTables,
+    OrderBy,
     SelectTableAction,
     connectionSlice,
     layoutSlice,
@@ -106,44 +107,27 @@ function* listDatabases(action: PayloadAction<ListDatabases>) {
     }
 }
 
-function* fetchInitialTableInfo(action: PayloadAction<SelectTableAction>) {
-    const { tabId, table, database } = action.payload
-
-    if (hasActiveConnection(tabId)) {
-        const sql = getConnection(tabId)
-        const columnInfo = yield call(sql.getColumnInfo, table)
-        const rows = yield call(sql.fetchTableRows, table, defaultLimit)
-        yield put(
-            connectionSlice.actions.fetchTableRowsSuccess(
-                tabId,
-                table,
-                rows,
-                database,
-                columnInfo,
-                0,
-            ),
-        )
-        const count = yield call(sql.fetchCount, table)
-        yield put(
-            connectionSlice.actions.fetchTableCountSuccess(
-                tabId,
-                table,
-                count,
-                database,
-            ),
-        )
-    } else {
-        throw new Error('no connection')
-    }
-}
-
 function* fetchPageHelper(action: PayloadAction<any>, offset: number) {
-    const { connectionId, database, table } = action.payload
+    const {
+        connectionId,
+        database,
+        table,
+        orderByColumn,
+        orderByType,
+    } = action.payload
 
     if (hasActiveConnection(connectionId)) {
         const sql = getConnection(connectionId)
         const columnInfo = yield call(sql.getColumnInfo, table)
-        const rows = yield call(sql.fetchTableRows, table, defaultLimit, offset)
+        const rows = yield call(
+            sql.fetchTableRows,
+            table,
+            defaultLimit,
+            orderByColumn,
+            orderByType,
+            offset,
+        )
+        const count = yield call(sql.fetchCount, table)
         yield put(
             connectionSlice.actions.fetchTableRowsSuccess(
                 connectionId,
@@ -152,20 +136,23 @@ function* fetchPageHelper(action: PayloadAction<any>, offset: number) {
                 database,
                 columnInfo,
                 offset,
-            ),
-        )
-        const count = yield call(sql.fetchCount, table)
-        yield put(
-            connectionSlice.actions.fetchTableCountSuccess(
-                connectionId,
-                table,
                 count,
-                database,
+                orderByColumn,
+                orderByType,
             ),
         )
     } else {
         throw new Error('no connection')
     }
+}
+
+function* fetchInitialTableInfo(action: PayloadAction<SelectTableAction>) {
+    const { tabId } = action.payload
+    yield call(
+        fetchPageHelper,
+        { payload: { ...action.payload, connectionId: tabId } } as any,
+        0,
+    )
 }
 
 function* fetchNextPage(action: PayloadAction<any>) {
@@ -187,6 +174,11 @@ function* refreshPage(action: PayloadAction<any>) {
     yield call(fetchPageHelper, action, currentOffset)
 }
 
+function* orderBy(action: PayloadAction<OrderBy>) {
+    const { currentOffset } = action.payload
+    yield call(fetchPageHelper, action, currentOffset)
+}
+
 function* sagaWorker() {
     yield takeLatest(
         connectionSlice.actions.attemptConnection,
@@ -197,6 +189,7 @@ function* sagaWorker() {
     yield takeLatest(connectionSlice.actions.nextPage, fetchNextPage)
     yield takeLatest(connectionSlice.actions.previousPage, fetchPreviousPage)
     yield takeLatest(connectionSlice.actions.refreshPage, refreshPage)
+    yield takeLatest(connectionSlice.actions.orderBy, orderBy)
 }
 
 export default sagaWorker

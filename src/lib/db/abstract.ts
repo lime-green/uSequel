@@ -15,6 +15,8 @@ export abstract class SQLClient {
     abstract fetchTableRows(
         table: string,
         limit: number,
+        orderByColumn: string | null,
+        orderByType: 'asc' | 'desc' | null,
         offset: number,
     ): Promise<Record<string, any>[]>
     abstract fetchCount(table: string): Promise<number>

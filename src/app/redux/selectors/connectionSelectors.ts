@@ -63,3 +63,29 @@ export const selectCurrentOffset = createSelector(
     selectTableData,
     (currentTable, tableData) => tableData[currentTable]?.currentOffset,
 )
+
+export const selectTablePK = createSelector(
+    selectTableColumnInfo,
+    (tableColumnInfo) =>
+        tableColumnInfo
+            .map((col, i) => (col.isPrimary ? i : -1))
+            .filter((col) => col >= 0),
+)
+
+export const selectLoading = createSelector(
+    selectCurrentTable,
+    selectTableData,
+    (currentTable, tableData) => tableData[currentTable]?.loading,
+)
+
+export const selectOrderedByColumn = createSelector(
+    selectCurrentTable,
+    selectTableData,
+    (currentTable, tableData) => tableData[currentTable]?.orderedByColumn,
+)
+
+export const selectOrderedByType = createSelector(
+    selectCurrentTable,
+    selectTableData,
+    (currentTable, tableData) => tableData[currentTable]?.orderedByType,
+)

@@ -58,9 +58,15 @@ export class MySQLClient extends SQLClient {
     fetchTableRows = (
         table: string,
         limit: number,
+        orderByColumn: string | null = null,
+        orderByType: 'asc' | 'desc' | null = null,
         offset = 0,
     ): Promise<Record<string, any>[]> => {
-        const query = `select * from ${table} limit ${limit} offset ${offset}`
+        let query = `select * from ${table}`
+        if (orderByColumn && orderByType)
+            query += ` order by ${orderByColumn} ${orderByType}`
+        if (limit) query += ` limit ${limit}`
+        if (offset) query += ` offset ${offset}`
         console.debug('Making query:', query)
 
         return this.sendDriver(this.connection.driver.query, query).then(

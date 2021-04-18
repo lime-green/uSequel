@@ -1,7 +1,8 @@
 import React, { FunctionComponent } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { connect, useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
 
+import { RootState } from 'app/redux/store'
 import { Theme } from 'app/renderer/colors'
 import {
     connectionSlice,
@@ -9,8 +10,12 @@ import {
     selectCurrentOffset,
     selectCurrentTabId,
     selectCurrentTable,
+    selectLoading,
+    selectOrderedByColumn,
+    selectOrderedByType,
     selectRowCount,
     selectTableColumnInfo,
+    selectTablePK,
     selectTableRows,
 } from 'app/redux'
 import refresh from 'app/renderer/assets/refresh.svg'
@@ -48,13 +53,12 @@ const Row = styled.div`
 ` as any
 
 const Column = styled.div`
-    padding: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     width: ${(props: any) => props.width}px;
-    min-width 100px;
-    padding: 0 5px;
+    min-width: 100px;
+    padding: 1px 5px;
 ` as any
 
 const ConnectedScreenWrapper = styled.div`
@@ -75,6 +79,10 @@ const ColumnInfoRow = styled(Row)`
 
 const ColumnInfoColumn = styled(Column)`
     border-right: 1px solid grey;
+
+    &:hover {
+        cursor: default;
+    }
 `
 
 const FooterWrapper = styled.div`
@@ -128,23 +136,71 @@ const Refresh = styled.div`
     line-height: 50px;
 `
 
-const Rows: FunctionComponent = () => {
-    const tableColumnInfo = useSelector(selectTableColumnInfo) as Array<any>
-    const tableRows = useSelector(selectTableRows)
-    const [height, setHeight] = React.useState(0)
-    React.useLayoutEffect(() => {
-        const totalHeight = document.getElementById('table').clientHeight
-        setHeight(totalHeight)
-    })
+const OrderByArrow = styled.span`
+    margin-left: 5px;
+`
 
-    const rowHeight = 20
-    const numRows = Math.max(
-        Math.floor(height / rowHeight) - 1,
-        tableRows.length,
-    )
-    const numCols = tableColumnInfo.length
+type RowsProps = {
+    tabId: string
+    tableColumnInfo: Record<string, any>[]
+    tablePK: number[]
+    tableRows: any[]
+    currentOffset: number
+    table: string
+    database: string
+    rowCount: number
+    isLoading: boolean
+    orderedByColumn: string | null
+    orderedByType: 'asc' | 'desc' | null
+    refreshPage
+    nextPage
+    previousPage
+    orderBy
+}
 
-    const calculateColumnWidths = (numRows, numCols) => {
+class UnconnectedRows extends React.Component<RowsProps> {
+    rowHeight = 20
+    tableRef = null
+
+    constructor(props) {
+        super(props)
+        this.tableRef = React.createRef()
+    }
+
+    shouldComponentUpdate(nextProps: Readonly<RowsProps>): boolean {
+        if (nextProps.orderedByType !== this.props.orderedByType) return true
+        if (nextProps.orderedByColumn !== this.props.orderedByColumn)
+            return true
+        if (nextProps.table !== this.props.table) return true
+        if (!nextProps.isLoading && this.props.isLoading) {
+            if (nextProps.rowCount !== this.props.rowCount) return true
+
+            return nextProps.tableRows.some((nextRow, i) => {
+                const rowValues = Object.values(this.props.tableRows[i])
+                const nextRowValues = Object.values(nextRow)
+                if (nextRowValues.length !== rowValues.length) return true
+                return nextRowValues.some((col, j) => {
+                    if (col !== rowValues[j]) return true
+                })
+            })
+        }
+        return false
+    }
+
+    get numRows() {
+        const tableHeight = this.tableRef.current?.clientHeight || 0
+        return Math.max(
+            Math.floor(tableHeight / this.rowHeight) - 1,
+            this.props.tableRows.length,
+        )
+    }
+
+    get numCols() {
+        return this.props.tableColumnInfo.length
+    }
+
+    calculateColumnWidths = (numRows, numCols) => {
+        const { tableColumnInfo, tableRows } = this.props
         const widths = {}
         if (!tableColumnInfo.length) return widths
 
@@ -163,10 +219,13 @@ const Rows: FunctionComponent = () => {
         }
 
         for (let i = 0; i < numRows; i++) {
-            const row = Object.values(tableRows[i] || {})
+            if (!tableRows[i]) continue
+            const row = Object.values(tableRows[i])
 
             for (let j = 0; j < numCols; j++) {
-                const col = String(row[j] || '') as string
+                if (!row[j]) continue
+
+                const col = String(row[j])
                 const width = numCharsToWidth(col.length)
                 if (width > widths[j]) {
                     widths[j] = width
@@ -175,43 +234,103 @@ const Rows: FunctionComponent = () => {
         }
         return widths
     }
-    const columnWidths = calculateColumnWidths(numRows, numCols)
 
-    const renderColumnHeader = () => {
+    getRowKey = (row, i) => {
+        const { tablePK } = this.props
+
+        if (!row.length || !tablePK.length) return i
+        let key = ''
+        tablePK.forEach((pk) => {
+            if (key) {
+                key += `-${row[pk]}`
+            } else {
+                key = row[pk]
+            }
+        })
+        return key
+    }
+
+    getColumnKey = (i) => {
+        const { tableColumnInfo } = this.props
+        return tableColumnInfo[i].name || i
+    }
+
+    renderColumnHeader = (columnWidths) => {
+        const { orderedByColumn, orderedByType, tableColumnInfo } = this.props
+        const getOrderByType = (columnInfo) => {
+            if (orderedByColumn !== columnInfo.name) return 'asc'
+            if (orderedByType === 'asc') return 'desc'
+            return null
+        }
+
         return (
-            <ColumnInfoRow key={'column-header'} height={rowHeight}>
+            <ColumnInfoRow height={this.rowHeight}>
                 {tableColumnInfo.map((columnInfo, j) => (
                     <ColumnInfoColumn
+                        onClick={() =>
+                            this.props.orderBy(
+                                this.props.tabId,
+                                this.props.database,
+                                this.props.table,
+                                this.props.currentOffset,
+                                getOrderByType(columnInfo) && columnInfo.name,
+                                getOrderByType(columnInfo),
+                            )
+                        }
                         key={columnInfo.name}
                         width={columnWidths[j]}
                     >
                         {columnInfo.name}
+                        {orderedByColumn === columnInfo.name &&
+                            (orderedByType === 'asc' ? (
+                                <OrderByArrow>&uarr;</OrderByArrow>
+                            ) : (
+                                <OrderByArrow>&darr;</OrderByArrow>
+                            ))}
                     </ColumnInfoColumn>
                 ))}
             </ColumnInfoRow>
         )
     }
 
-    const renderRows = () => {
-        return Array.from(Array(numRows)).map((_, i) => (
-            <Row key={i} height={rowHeight}>
-                {Array.from(Array(numCols)).map((_, j) => {
-                    return (
-                        <Column key={j} width={columnWidths[j]}>
-                            {Object.values(tableRows[i] || {})[j]}
-                        </Column>
-                    )
-                })}
-            </Row>
-        ))
+    renderRows = (columnWidths) => {
+        const { tableRows } = this.props
+
+        return Array.from(Array(this.numRows)).map((_, i) => {
+            const row = Object.values(tableRows[i] || {})
+            return (
+                <Row key={this.getRowKey(row, i)} height={this.rowHeight}>
+                    {Array.from(Array(this.numCols)).map((_, j) => {
+                        return (
+                            <Column
+                                key={this.getColumnKey(j)}
+                                width={columnWidths[j]}
+                            >
+                                {row[j]}
+                            </Column>
+                        )
+                    })}
+                </Row>
+            )
+        })
     }
 
-    return (
-        <Table id="table">
-            {renderColumnHeader()}
-            <RowsWrapper id="rows-wrapper">{renderRows()}</RowsWrapper>
-        </Table>
-    )
+    render() {
+        console.debug('render')
+        const columnWidths = this.calculateColumnWidths(
+            this.numRows,
+            this.numCols,
+        )
+
+        return (
+            <Table id="table" ref={this.tableRef}>
+                {this.renderColumnHeader(columnWidths)}
+                <RowsWrapper id="rows-wrapper">
+                    {this.renderRows(columnWidths)}
+                </RowsWrapper>
+            </Table>
+        )
+    }
 }
 
 const Footer = () => {
@@ -220,6 +339,8 @@ const Footer = () => {
     const table = useSelector(selectCurrentTable)
     const database = useSelector(selectCurrentDatabase)
     const rowCount = useSelector(selectRowCount)
+    const orderedByColumn = useSelector(selectOrderedByColumn)
+    const orderedByType = useSelector(selectOrderedByType)
     const dispatch = useDispatch()
 
     const perPage = 100
@@ -254,6 +375,8 @@ const Footer = () => {
                                 database,
                                 table,
                                 currentOffset,
+                                orderedByColumn,
+                                orderedByType,
                             ),
                         )
                     }}
@@ -275,6 +398,8 @@ const Footer = () => {
                                 database,
                                 table,
                                 currentOffset,
+                                orderedByColumn,
+                                orderedByType,
                             ),
                         )
                     }}
@@ -293,6 +418,8 @@ const Footer = () => {
                                 database,
                                 table,
                                 currentOffset,
+                                orderedByColumn,
+                                orderedByType,
                             ),
                         )
                     }}
@@ -303,6 +430,28 @@ const Footer = () => {
         </FooterWrapper>
     )
 }
+
+const Rows = connect(
+    (state: RootState) => ({
+        tabId: selectCurrentTabId(state),
+        tableColumnInfo: selectTableColumnInfo(state),
+        tablePK: selectTablePK(state),
+        tableRows: selectTableRows(state),
+        currentOffset: selectCurrentOffset(state),
+        table: selectCurrentTable(state),
+        database: selectCurrentDatabase(state),
+        rowCount: selectRowCount(state),
+        isLoading: selectLoading(state),
+        orderedByColumn: selectOrderedByColumn(state),
+        orderedByType: selectOrderedByType(state),
+    }),
+    {
+        refreshPage: connectionSlice.actions.refreshPage,
+        nextPage: connectionSlice.actions.nextPage,
+        previousPage: connectionSlice.actions.previousPage,
+        orderBy: connectionSlice.actions.orderBy,
+    },
+)(UnconnectedRows)
 
 export const ConnectedScreen: FunctionComponent = () => {
     return (
