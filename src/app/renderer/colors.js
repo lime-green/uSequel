@@ -13,11 +13,12 @@ export const Colors = {
 }
 
 export const Theme = {
-    ACCENT: null,
-    BG: null,
-    BG_SECONDARY: null,
-    BG_SIDEBAR: null,
-    FG: null,
+    // TODO: Change these
+    ACCENT: Colors.STEEL_GREY,
+    BG: Colors.BOKARA_GREY,
+    BG_SECONDARY: Colors.ACADIA,
+    BG_SIDEBAR: Colors.JAGUAR,
+    FG: Colors.EBONY,
 
     FOOTER: Colors.MEDIUM_GREY,
     FOCUS: Colors.BLUE_PRIMARY,
