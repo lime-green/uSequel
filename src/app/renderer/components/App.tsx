@@ -30,6 +30,7 @@ const SideBarContainer = styled.div`
     height: 100%;
     overflow: hidden;
     min-width: 100px;
+    max-width: 350px;
 `
 
 const MainScreenContainer = styled.div`

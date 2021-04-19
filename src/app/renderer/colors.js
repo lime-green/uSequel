@@ -5,7 +5,7 @@ export const Colors = {
     EBONY: '#2f3334',
     STEEL_GREY: '#434748',
     MONTANA: '#373c3d',
-    BLUE_PRIMARY: '#1671d3',
+    BLUE_PRIMARY: '#10549e',
     BOKARA_GREY: '#2d2723',
     ACADIA: '#342e2a',
     JAGUAR: '#2c292b',

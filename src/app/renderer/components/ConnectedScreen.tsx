@@ -286,7 +286,7 @@ class UnconnectedRows extends React.Component<RowsProps> {
     getRowKey = (row, i) => {
         const { tablePK } = this.props
 
-        if (!row.length) return i
+        if (!row.length) return `blank-${i}`
         if (!tablePK.length)
             return hashCode(row.reduce((agg, val) => `${agg}-${val}`))
 
