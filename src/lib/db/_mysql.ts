@@ -130,18 +130,6 @@ export class MySQLClient extends SQLClient {
         )
     }
 
-    searchTables = (lookup: string): Promise<string[]> => {
-        const query = `show tables like '%${lookup}%'`
-        console.debug('Making query:', query)
-
-        return this.sendDriver(this.connection.driver.query, query).then(
-            ([results]) => {
-                console.log(results)
-                return results.map((row) => row.Tables_in_mysql)
-            },
-        )
-    }
-
     update = (
         table: string,
         set: Record<string, any>,

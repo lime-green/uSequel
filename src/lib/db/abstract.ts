@@ -35,7 +35,6 @@ export abstract class SQLClient {
     ): Promise<Record<string, any>[]>
     abstract fetchCount(table: string): Promise<number>
     abstract getColumnInfo(table: string): Promise<ColumnInfo[]>
-    abstract searchTables(lookup: string): Promise<string[]>
     abstract update(
         table: string,
         set: Record<string, any>,
