@@ -2,8 +2,9 @@ import React, { Component, FunctionComponent } from 'react'
 import { connect, useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
 
+import { hashCode } from 'lib/util'
 import { RootState } from 'app/redux/store'
-import { Theme } from 'app/renderer/colors'
+import { Colors, Theme } from 'app/renderer/colors'
 import {
     connectionSlice,
     selectCurrentDatabase,
@@ -70,16 +71,6 @@ const Column = styled.div`
     min-width: 100px;
     padding: 0 5px;
 
-    &:hover {
-        background: ${(props: any) =>
-            props.hasData ? Theme.FOCUS_SECONDARY : 'inherit'};
-
-        input {
-            background: ${(props: any) =>
-                props.hasData ? Theme.FOCUS_SECONDARY : 'inherit'};
-        }
-    }
-
     span,
     input {
         font-size: 14px;
@@ -127,11 +118,13 @@ const ColumnInfoColumn = styled(Column)`
 `
 
 const FooterWrapper = styled.div`
+    background: ${Theme.FOOTER};
     display: flex;
     justify-content: space-between;
     width: 100%;
     height: 30px;
     overflow: hidden;
+    box-shadow: 0 0 3px 3px ${Theme.ACCENT};
 `
 
 const FooterLeft = styled.div`
@@ -197,6 +190,7 @@ type RowsProps = {
     nextPage
     previousPage
     orderBy
+    updateSingleValue
 }
 
 class UnconnectedRows extends React.Component<RowsProps> {
@@ -225,10 +219,9 @@ class UnconnectedRows extends React.Component<RowsProps> {
             if (nextProps.rowCount !== this.props.rowCount) return true
 
             return nextProps.tableRows.some((nextRow, i) => {
-                const rowValues = Object.values(this.props.tableRows[i])
-                const nextRowValues = Object.values(nextRow)
-                if (nextRowValues.length !== rowValues.length) return true
-                return nextRowValues.some((col, j) => {
+                const rowValues = this.props.tableRows[i]
+                if (nextRow.length !== rowValues.length) return true
+                return nextRow.some((col, j) => {
                     if (col !== rowValues[j]) return true
                 })
             })
@@ -260,8 +253,8 @@ class UnconnectedRows extends React.Component<RowsProps> {
         if (!tableColumnInfo.length) return widths
 
         const numCharsToWidth = (numChars) => {
-            if (!numChars) return 9
-            const width = numChars * 9
+            if (!numChars) return 10
+            const width = numChars * 10
             return Math.min(width, 450)
         }
 
@@ -275,7 +268,7 @@ class UnconnectedRows extends React.Component<RowsProps> {
 
         for (let i = 0; i < numRows; i++) {
             if (!tableRows[i]) continue
-            const row = Object.values(tableRows[i])
+            const row = tableRows[i]
 
             for (let j = 0; j < numCols; j++) {
                 if (!row[j]) continue
@@ -293,16 +286,14 @@ class UnconnectedRows extends React.Component<RowsProps> {
     getRowKey = (row, i) => {
         const { tablePK } = this.props
 
-        if (!row.length || !tablePK.length) return i
-        let key = ''
-        tablePK.forEach((pk) => {
-            if (key) {
-                key += `-${row[pk]}`
-            } else {
-                key = row[pk]
-            }
-        })
-        return key
+        if (!row.length) return i
+        if (!tablePK.length)
+            return hashCode(row.reduce((agg, val) => `${agg}-${val}`))
+
+        return tablePK.reduce(
+            (agg, pk) => (agg ? `${agg}-${row[pk]}` : `${row[pk]}`),
+            '',
+        )
     }
 
     getColumnKey = (i) => {
@@ -357,11 +348,21 @@ class UnconnectedRows extends React.Component<RowsProps> {
         }
     }
 
-    renderColumnBody = (col, columnId, hasData) => {
+    renderColumnBody = (col, columnName, columnId, hasData, row) => {
         if (hasData) {
             return (
                 <Input
-                    onSubmit={(val) => this.setState({ rowSelected: null })}
+                    onSubmit={(val) => {
+                        this.setState({ rowSelected: null })
+                        this.props.updateSingleValue(
+                            this.props.tabId,
+                            this.props.database,
+                            this.props.table,
+                            columnName,
+                            val,
+                            row,
+                        )
+                    }}
                     value={col}
                 />
             )
@@ -371,10 +372,10 @@ class UnconnectedRows extends React.Component<RowsProps> {
     }
 
     renderRows = (columnWidths) => {
-        const { tableRows } = this.props
+        const { tableColumnInfo, tableRows } = this.props
 
         return Array.from(Array(this.numRows)).map((_, i) => {
-            const row = Object.values(tableRows[i] || {})
+            const row = tableRows[i] || []
             const rowKey = this.getRowKey(row, i)
 
             return (
@@ -396,7 +397,13 @@ class UnconnectedRows extends React.Component<RowsProps> {
                                 key={columnKey}
                                 width={columnWidths[j]}
                             >
-                                {this.renderColumnBody(col, columnId, hasData)}
+                                {this.renderColumnBody(
+                                    col,
+                                    tableColumnInfo[j].name,
+                                    columnId,
+                                    hasData,
+                                    row,
+                                )}
                             </Column>
                         )
                     })}
@@ -405,19 +412,35 @@ class UnconnectedRows extends React.Component<RowsProps> {
         })
     }
 
-    render() {
-        console.debug('render')
+    renderTableBody = () => {
+        if (!this.props.table) return null
+
         const columnWidths = this.calculateColumnWidths(
             this.numRows,
             this.numCols,
         )
+        return (
+            <>
+                {this.renderColumnHeader(columnWidths)}
+                <RowsWrapper
+                    id="rows-wrapper"
+                    onKeyUp={(e) => {
+                        if (e.code === 'Escape')
+                            this.setState({ rowSelected: null })
+                    }}
+                >
+                    {this.renderRows(columnWidths)}
+                </RowsWrapper>
+            </>
+        )
+    }
+
+    render() {
+        console.debug('render')
 
         return (
             <Table id="table" ref={this.tableRef}>
-                {this.renderColumnHeader(columnWidths)}
-                <RowsWrapper id="rows-wrapper">
-                    {this.renderRows(columnWidths)}
-                </RowsWrapper>
+                {this.renderTableBody()}
             </Table>
         )
     }
@@ -533,7 +556,6 @@ const InputWrapper = styled.input`
 class Input extends Component<InputProps> {
     ref = null
     state = {
-        disabled: true,
         value: this.props.value,
     }
 
@@ -542,31 +564,16 @@ class Input extends Component<InputProps> {
         this.ref = React.createRef() as React.RefObject<any>
     }
 
-    componentDidUpdate(
-        prevProps: Readonly<InputProps>,
-        prevState: Readonly<any>,
-    ) {
-        if (prevState.disabled && !this.state.disabled) {
-            this.ref.current.focus()
-        }
-    }
-
     render() {
-        const { disabled } = this.state
-
         return (
-            <span
-                onDoubleClick={() => {
-                    this.setState({ disabled: false })
-                }}
-            >
+            <span>
                 <InputWrapper
-                    disabled={disabled}
-                    onBlur={() => this.setState({ disabled: true })}
                     onKeyUp={(e) => {
+                        if (e.key === 'Escape') {
+                            document.getSelection().empty()
+                        }
                         if (e.key === 'Enter') {
                             document.getSelection().empty()
-                            this.setState({ disabled: true })
                             this.props.onSubmit(this.state.value)
                         }
                     }}
@@ -575,11 +582,7 @@ class Input extends Component<InputProps> {
                         this.setState({ value: e.currentTarget.value })
                     }
                     onFocus={(e) => {
-                        if (disabled) {
-                            e.currentTarget.blur()
-                        } else {
-                            e.currentTarget.select()
-                        }
+                        e.currentTarget.select()
                     }}
                     value={this.state.value === null ? '' : this.state.value}
                     ref={this.ref}
@@ -604,10 +607,11 @@ const Rows = connect(
         orderedByType: selectOrderedByType(state),
     }),
     {
-        refreshPage: connectionSlice.actions.refreshPage,
         nextPage: connectionSlice.actions.nextPage,
-        previousPage: connectionSlice.actions.previousPage,
         orderBy: connectionSlice.actions.orderBy,
+        previousPage: connectionSlice.actions.previousPage,
+        refreshPage: connectionSlice.actions.refreshPage,
+        updateSingleValue: connectionSlice.actions.updateSingleValue,
     },
 )(UnconnectedRows)
 

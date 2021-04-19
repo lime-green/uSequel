@@ -4,10 +4,10 @@ import { MySQLClient } from './_mysql'
 
 export const sqlClientFactory = (
     type: string,
-    { host, username, password, database },
+    { host, username, password, database, port },
 ): SQLClient => {
     const client = {
         mysql: MySQLClient,
     }[type]
-    return new client({ host, username, password, database })
+    return new client({ host, username, password, database, port })
 }

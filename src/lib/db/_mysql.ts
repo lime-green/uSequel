@@ -2,12 +2,12 @@ import mysql from 'mysql'
 
 import { promisify } from 'lib/util'
 
-import { Connection, SQLClient } from './abstract'
+import { ColumnInfo, Connection, SQLClient, UpdateResult } from './abstract'
 
 export class MySQLClient extends SQLClient {
     protected connection: { driver: mysql.Connection }
 
-    constructor({ host, database, username, password }) {
+    constructor({ host, database, username, password, port }) {
         super()
         this.connection = new Connection(
             mysql.createConnection({
@@ -15,6 +15,7 @@ export class MySQLClient extends SQLClient {
                 database,
                 user: username,
                 password,
+                port,
                 dateStrings: true,
                 stringifyObjects: true,
             }),
@@ -51,7 +52,7 @@ export class MySQLClient extends SQLClient {
             this.connection.driver.query,
             'show tables',
         ).then(([results]) => {
-            return results.map((row) => row.Tables_in_mysql)
+            return results.map((row) => Object.values(row)[0])
         })
     }
 
@@ -75,17 +76,17 @@ export class MySQLClient extends SQLClient {
                     fatal: true,
                 })
                 const normalizeRow = (row) => {
-                    const normalizedRow = { ...row }
-                    Object.entries(normalizedRow).forEach(([k, v]) => {
+                    const normalizedRow = Object.values(row)
+                    return normalizedRow.map((v) => {
                         if (v instanceof Buffer) {
                             try {
-                                normalizedRow[k] = decoder.decode(v)
+                                return decoder.decode(v)
                             } catch {
-                                normalizedRow[k] = `0x${v.toString('hex')}`
+                                return `0x${v.toString('hex')}`
                             }
                         }
+                        return v
                     })
-                    return normalizedRow
                 }
                 return results.map((row) => normalizeRow(row))
             },
@@ -103,7 +104,7 @@ export class MySQLClient extends SQLClient {
         )
     }
 
-    getColumnInfo = (table: string): Promise<Record<string, any>[]> => {
+    getColumnInfo = (table: string): Promise<ColumnInfo[]> => {
         const query = `show columns from ${table}`
         console.debug('Making query:', query)
 
@@ -139,5 +140,40 @@ export class MySQLClient extends SQLClient {
                 return results.map((row) => row.Tables_in_mysql)
             },
         )
+    }
+
+    update = (
+        table: string,
+        set: Record<string, any>,
+        where: Record<string, any>,
+    ): Promise<UpdateResult> => {
+        const setQuery = Object.entries(set).reduce(
+            (agg, [k, v]) => (agg ? `${agg}, ${k} = '${v}'` : `${k} = '${v}'`),
+            '',
+        )
+        const whereQuery = Object.entries(where).reduce(
+            (agg, [k, v]) =>
+                agg ? `${agg} and ${k} = '${v}'` : `${k} = '${v}'`,
+            '',
+        )
+
+        const query = `update ${table} set ${setQuery} where ${whereQuery}`
+        console.debug('Making query:', query)
+
+        return this.sendDriver(this.connection.driver.query, query).then(
+            ([results]) => {
+                return {
+                    affectedCount: results.affectedRows,
+                    changedCount: results.changedRows,
+                }
+            },
+        )
+    }
+
+    selectDatabase = (database: string): Promise<void> => {
+        const query = `use ${database}`
+        console.debug('Making query:', query)
+
+        return this.sendDriver(this.connection.driver.query, query)
     }
 }

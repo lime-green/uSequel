@@ -5,3 +5,6 @@ export const promisify = (fn, ...args) =>
             return resolve(cbArgs)
         })
     })
+
+export const hashCode = (s: string): number =>
+    s.split('').reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0)

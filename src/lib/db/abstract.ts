@@ -6,6 +6,20 @@ export class Connection {
     }
 }
 
+export type UpdateResult = {
+    affectedCount: number
+    changedCount: number
+}
+
+export type ColumnInfo = {
+    name: string
+    type: string
+    isNull: boolean
+    isPrimary: boolean
+    isUnique: boolean
+    default: string | number | null
+}
+
 export abstract class SQLClient {
     protected connection: Connection
     abstract connect(): Promise<SQLClient>
@@ -20,6 +34,12 @@ export abstract class SQLClient {
         offset: number,
     ): Promise<Record<string, any>[]>
     abstract fetchCount(table: string): Promise<number>
-    abstract getColumnInfo(table: string): Promise<Record<string, any>[]>
+    abstract getColumnInfo(table: string): Promise<ColumnInfo[]>
     abstract searchTables(lookup: string): Promise<string[]>
+    abstract update(
+        table: string,
+        set: Record<string, any>,
+        where: Record<string, any>,
+    ): Promise<UpdateResult>
+    abstract selectDatabase(database: string): Promise<void>
 }

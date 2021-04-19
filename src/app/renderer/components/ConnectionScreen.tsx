@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import { Colors, Theme } from 'app/renderer/colors'
-import { connectionSlice } from 'app/redux'
+import { connectionSlice, selectCurrentTabId } from 'app/redux'
 
 type Event = React.ChangeEvent<HTMLInputElement>
 type ConnectionInputProps = {
@@ -13,6 +13,7 @@ type ConnectionInputProps = {
     onChange: (e: Event) => void
     value: string | number
     placeholder?: string
+    required?: boolean
 }
 
 const ConnectionScreenWrapper = styled.div`
@@ -43,57 +44,65 @@ const ConnectionInputRow = styled.div`
     }
 `
 
+const ButtonWrapper = styled.div`
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 10px;
+`
+
 const Button = styled.button`
     background-color: ${Colors.BLUE_PRIMARY};
     border: 0;
     border-radius: 5px;
-    width: 100px;
+    width: 90%;
     padding: 3px;
+
+    &:hover {
+        cursor: pointer;
+    }
 `
 
-const ConnectionInput = ({
-    type,
-    name,
-    label,
-    onChange,
-    value,
-    placeholder,
-}: ConnectionInputProps) => (
+const ConnectionInput = ({ name, label, ...props }: ConnectionInputProps) => (
     <ConnectionInputRow>
         <Label htmlFor={name}>{label}</Label>
-        <input
-            onChange={onChange}
-            value={value}
-            type={type}
-            name={name}
-            placeholder={placeholder}
-        />
+        <input {...props} name={name} />
     </ConnectionInputRow>
 )
 
 export const ConnectionScreen: FunctionComponent = () => {
-    const state = useSelector((state) => state)
     const dispatch = useDispatch()
-    const [name, setName] = React.useState('')
+    const currentTabId = useSelector(selectCurrentTabId)
+    const [host, setHost] = React.useState('localhost')
     const [username, setUsername] = React.useState('')
     const [password, setPassword] = React.useState('')
     const [database, setDatabase] = React.useState('')
     const [port, setPort] = React.useState(3306)
     const onConnectionSubmit = (e: React.FormEvent) => {
-        console.log('submitted!')
         e.preventDefault()
-        dispatch(connectionSlice.actions.attemptConnection('0'))
+        dispatch(
+            connectionSlice.actions.attemptConnection(
+                currentTabId,
+                'placeholder-name',
+                host,
+                username,
+                password,
+                database,
+                port,
+            ),
+        )
     }
 
     return (
         <ConnectionScreenWrapper>
             <ConnectionForm onSubmit={onConnectionSubmit}>
                 <ConnectionInput
-                    onChange={(e: Event) => setName(e.target.value)}
-                    value={name}
+                    onChange={(e: Event) => setHost(e.target.value)}
+                    value={host}
                     type={'text'}
-                    name={'name'}
-                    label={'Name:'}
+                    name={'host'}
+                    label={'Host:'}
+                    required={true}
                 />
                 <ConnectionInput
                     onChange={(e: Event) => setUsername(e.target.value)}
@@ -101,6 +110,7 @@ export const ConnectionScreen: FunctionComponent = () => {
                     type={'text'}
                     name={'username'}
                     label={'Username:'}
+                    required={true}
                 />
                 <ConnectionInput
                     onChange={(e: Event) => setPassword(e.target.value)}
@@ -108,6 +118,7 @@ export const ConnectionScreen: FunctionComponent = () => {
                     type={'password'}
                     name={'password'}
                     label={'Password:'}
+                    required={true}
                 />
                 <ConnectionInput
                     onChange={(e: Event) => setDatabase(e.target.value)}
@@ -124,7 +135,9 @@ export const ConnectionScreen: FunctionComponent = () => {
                     name={'port'}
                     label={'Port:'}
                 />
-                <Button type={'submit'}>Connect</Button>
+                <ButtonWrapper>
+                    <Button type={'submit'}>Connect</Button>
+                </ButtonWrapper>
             </ConnectionForm>
         </ConnectionScreenWrapper>
     )

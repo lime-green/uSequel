@@ -21,6 +21,12 @@ const selectDatabaseData = createSelector(
     selectConnection,
     (connection) => connection.databaseData,
 )
+
+export const selectDatabases = createSelector(
+    selectConnection,
+    (connection) => connection.databases || [],
+)
+
 export const selectCurrentDatabase = createSelector(
     selectConnection,
     (connection) => connection.currentDatabase,
@@ -45,6 +51,15 @@ export const selectTableRows = createSelector(
     selectTableData,
     (currentTable, tableData) => tableData[currentTable]?.rows || [],
 )
+
+export const getTableColumnInfo = (
+    state: RootState,
+    connectionId: string,
+    database: string,
+    table: string,
+) =>
+    state.connections[connectionId].databaseData[database].tableData[table]
+        .columnInfo
 
 export const selectTableColumnInfo = createSelector(
     selectCurrentTable,

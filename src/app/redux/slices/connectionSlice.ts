@@ -45,8 +45,17 @@ export type connectionState = {
 
 export type Connect = {
     connectionId: string
+    name: string
     host?: string
+    username: string
+    password: string
     database?: string
+    port: number
+}
+
+export type ConnectSuccess = {
+    connectionId: string
+    database: string
 }
 
 export type ListDatabases = {
@@ -90,6 +99,15 @@ export type OrderBy = {
     orderByType: 'asc' | 'desc' | null
 }
 
+export type UpdateSingleValue = {
+    connectionId: string
+    database: string
+    table: string
+    columnName: string
+    columnValue: string | null
+    row: (string | null)[]
+}
+
 const initialState = {
     '0': {
         currentDatabase: null,
@@ -110,14 +128,44 @@ export const connectionSlice = createSlice({
             },
             prepare: (
                 connectionId: string,
+                name: string,
                 host = 'localhost',
-                database = 'mysql',
+                username: string,
+                password: string,
+                database,
+                port = 3306,
             ) => {
-                return { payload: { connectionId, database, host } }
+                return {
+                    payload: {
+                        connectionId,
+                        name,
+                        host,
+                        username,
+                        password,
+                        database,
+                        port,
+                    },
+                }
+            },
+        },
+        selectDatabase: {
+            reducer: (state) => void state,
+            prepare: (connectionId: string, database: string) => {
+                return { payload: { connectionId, database } }
+            },
+        },
+        selectDatabaseSuccess: {
+            reducer: (state, action: PayloadAction<any>) => {
+                const { connectionId, database } = action.payload
+
+                state[connectionId].currentDatabase = database
+            },
+            prepare: (connectionId: string, database: string) => {
+                return { payload: { connectionId, database } }
             },
         },
         attemptConnectionSuccess: {
-            reducer: (state, action: PayloadAction<Connect>) => {
+            reducer: (state, action: PayloadAction<ConnectSuccess>) => {
                 const { connectionId, database } = action.payload
                 state[connectionId].isConnecting = false
                 state[connectionId].isConnected = true
@@ -178,9 +226,7 @@ export const connectionSlice = createSlice({
             },
         },
         listDatabases: {
-            reducer: (state) => {
-                return state
-            },
+            reducer: (state) => void state,
             prepare: (connectionId: string) => {
                 return { payload: { connectionId } }
             },
@@ -313,9 +359,7 @@ export const connectionSlice = createSlice({
             },
         },
         listTables: {
-            reducer: (state) => {
-                return state
-            },
+            reducer: (state) => void state,
             prepare: (connectionId: string, database: string) => {
                 return { payload: { connectionId, database } }
             },
@@ -344,6 +388,34 @@ export const connectionSlice = createSlice({
                 tables: string[],
             ) => {
                 return { payload: { connectionId, database, tables } }
+            },
+        },
+        updateSingleValue: {
+            reducer: (state, action: PayloadAction<UpdateSingleValue>) => {
+                const { connectionId, table, database } = action.payload
+
+                state[connectionId].databaseData[database].tableData[
+                    table
+                ].loading = true
+            },
+            prepare: (
+                connectionId: string,
+                database: string,
+                table: string,
+                columnName: string,
+                columnValue: string | null,
+                row: (string | null)[],
+            ) => {
+                return {
+                    payload: {
+                        connectionId,
+                        database,
+                        table,
+                        columnName,
+                        columnValue,
+                        row,
+                    },
+                }
             },
         },
     },

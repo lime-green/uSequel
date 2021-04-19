@@ -58,7 +58,10 @@ const createElectronIPCMiddleware = (ipcSend: (...args) => void) => {
 
         if (!action[actionSentinelKey]) {
             console.debug('FORWARDING ACTION', action.type)
-            ipcSend(REDUX_IPC_CHANNEL, { ...action, [actionSentinelKey]: true })
+            ipcSend(REDUX_IPC_CHANNEL, {
+                ...action,
+                [actionSentinelKey]: true,
+            })
         }
 
         next(action)

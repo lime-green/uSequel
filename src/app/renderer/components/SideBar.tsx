@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import debounce from 'lodash.debounce'
 
 import {
-    connectionSlice,
     layoutSlice,
     selectCurrentDatabase,
     selectCurrentTabId,
@@ -15,6 +14,8 @@ import { Theme } from 'app/renderer/colors'
 
 const SideBarWrapper = styled.div`
     background: ${Theme.BG_SIDEBAR};
+    min-height: 0;
+    height: 100%;
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -28,18 +29,23 @@ const SideBarWrapper = styled.div`
 const TableHeader = styled.div`
     color: ${Theme.ACCENT};
     margin: 10px;
+    margin-bottom: 2px;
 `
 
 const TableList = styled.div`
     border: 1px solid ${Theme.ACCENT};
-    flex-grow: 1;
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 10px;
 `
 
 const TableNameList = styled.div`
     margin: 10px;
-    margin-left: 20px;
     height: 100%;
-    overflow-y: auto;
+    font-size: 12px;
 `
 
 const TableName = styled.div`
@@ -63,6 +69,7 @@ const TableSearchWrapper = styled.div`
     display: flex;
     padding: 5px;
     border: 1px solid ${Theme.ACCENT};
+    height: 50px;
 `
 
 const TableSearchInput = styled.input`
