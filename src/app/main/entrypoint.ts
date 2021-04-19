@@ -20,6 +20,7 @@ const createWindow = (): void => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
         show: false,
+        icon: './icon.icns',
         webPreferences: {
             contextIsolation: true,
             nodeIntegration: false,

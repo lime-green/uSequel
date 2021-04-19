@@ -1,6 +1,6 @@
 {
-    "name": "usequel",
-    "productName": "usequel",
+    "name": "uSequel",
+    "productName": "uSequel",
     "version": "1.0.0",
     "description": "My Electron application description",
     "main": ".webpack/main",
@@ -19,18 +19,21 @@
     "license": "MIT",
     "config": {
         "forge": {
-            "packagerConfig": {},
+            "packagerConfig": {
+                "icon": "./icon.icns"
+            },
             "makers": [
                 {
                     "name": "@electron-forge/maker-squirrel",
                     "config": {
-                        "name": "usequel"
+                        "name": "uSequel"
                     }
                 },
                 {
                     "name": "@electron-forge/maker-zip",
                     "platforms": [
-                        "darwin"
+                        "darwin",
+                        "linux"
                     ]
                 },
                 {

@@ -14,4 +14,7 @@ module.exports = {
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
         modules: [path.join(__dirname, 'src'), 'node_modules'],
     },
+    optimization: {
+        minimize: false, // MySQL errors otherwise
+    },
 }

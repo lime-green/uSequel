@@ -446,7 +446,7 @@ class UnconnectedRows extends React.Component<RowsProps> {
     }
 }
 
-const Footer = () => {
+const Footer = ({ handleRowRemove }) => {
     const tabId = useSelector(selectCurrentTabId)
     const currentOffset = useSelector(selectCurrentOffset)
     const table = useSelector(selectCurrentTable)
@@ -478,7 +478,7 @@ const Footer = () => {
         <FooterWrapper>
             <FooterLeft>
                 <Plus>+</Plus>
-                <Minus>-</Minus>
+                <Minus onClick={handleRowRemove}>-</Minus>
                 <Refresh
                     onClick={() => {
                         if (!table) return
@@ -619,7 +619,13 @@ export const ConnectedScreen: FunctionComponent = () => {
     return (
         <ConnectedScreenWrapper>
             <Rows />
-            <Footer />
+            <Footer
+                handleRowRemove={() => {
+                    if (confirm('Are you sure you want to delete this row?')) {
+                        console.log('yes')
+                    }
+                }}
+            />
         </ConnectedScreenWrapper>
     )
 }
